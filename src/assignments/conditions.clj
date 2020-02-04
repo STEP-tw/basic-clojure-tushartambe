@@ -54,7 +54,6 @@
           (> x y) :greece
           :else :universe))
 
-
 (defn is-single-occurance [subcoll supercoll]
   (not (or
          (empty? (filter (into #{} subcoll) supercoll))
@@ -135,6 +134,6 @@
    :use          '[as-> reverse]
    :implemented? true}
   [coll] (as-> coll l1
-               (if (every? (partial instance? Number) l1) (map inc l1) l1)
+               (if (every? number? l1) (map inc l1) l1)
                (cons 0 l1)
-               (concat (reverse l1) (if (every? (partial instance? Number) coll) (map inc coll) coll))))
+               (concat (reverse l1) (if (every? number? coll) (map inc coll) coll))))
