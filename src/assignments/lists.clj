@@ -107,7 +107,8 @@
    :use          '[partition every? partial apply <=]
    :dont-use     '[loop recur]
    :implemented? false}
-  [coll])
+  [coll]
+  (apply <= coll))
 
 (defn distinct'
   "Implement your own lazy sequence version of distinct which returns
@@ -117,7 +118,8 @@
    :use          '[lazy-seq set conj let :optionally letfn]
    :dont-use     '[loop recur distinct]
    :implemented? false}
-  [coll])
+  [coll]
+  )
 
 (defn dedupe'
   "Implement your own lazy sequence version of dedupe which returns
@@ -158,7 +160,9 @@
   "Transposes a given matrix.
   [[a b] [c d]] => [[a c] [b d]].
   Note this is a def. Not a defn.
-  Return a vector of vectors, not list of vectors or vectors of lists")
+  Return a vector of vectors, not list of vectors or vectors of lists"
+  (apply mapv vector [[:a :b] [:c :d]])
+  )
 
 (defn difference
   "Given two collections, returns only the elements that are present
@@ -166,8 +170,9 @@
   {:level        :easy
    :use          '[remove set]
    :dont-use     '[loop recur if]
-   :implemented? false}
-  [coll1 coll2])
+   :implemented? true}
+  [coll1 coll2]
+  (remove #((into (set coll1)) %) coll2))
 
 (defn union
   "Given two collections, returns a new collection with elements from the second
@@ -176,19 +181,21 @@
   if elements repeat."
   {:level        :easy
    :use          '[remove into set ->>]
-   :implemented? false}
-  [coll1 coll2])
+   :implemented? true}
+  [coll1 coll2]
+  (concat coll1 (remove (into (set coll1)) coll2)))
 
 ;; points-around-origin is a def not a defn
 (def
   ^{:level        :easy
     :use          '[for]
     :dont-use     '[hardcoded-values map filter]
-    :implemented? false}
+    :implemented? true}
   points-around-origin
   "Calculate all the points around the origin
   [-1 -1] [0 -1] [1 -1] etc. There should be 8 points
-  Note this is a def, not a defn")
+  Note this is a def, not a defn"
+  (remove (fn [x] (= x [0 0])) (for [x (range -1 2) y (range -1 2)] [x y])))
 
 (defn cross-product
   "Given two sequences, generate every combination in the sequence
@@ -198,7 +205,8 @@
   {:level        :easy
    :use          '[for]
    :implemented? false}
-  [seq1 seq2])
+  [seq1 seq2]
+  (for [x seq1 y seq2 :while (not= x y)] [x y]))
 
 (defn double-up
   "Given a collection, return a new collection that contains
@@ -206,7 +214,8 @@
   {:level        :easy
    :use          '[mapcat partial repeat :optionally vector]
    :implemented? false}
-  [coll])
+  [coll]
+  (mapcat #(vector % %) coll))
 
 (defn third-or-fifth
   "Given a collection return a new collection that contains
@@ -263,8 +272,13 @@
   {:level        :easy
    :use          '[empty? loop recur butlast rest]
    :dont-use     '[reverse]
-   :implemented? false}
-  [coll])
+   :implemented? true}
+  [coll]
+  (loop [coll coll
+         palindrome? true]
+    (if (or (empty? coll) (not palindrome?))
+      palindrome?
+      (recur (drop-last (rest coll)) (= (first coll) (last coll))))))
 
 (defn index-of
   "index-of takes a sequence and an element and finds the index
@@ -273,11 +287,48 @@
   {:level        :easy
    :use          '[loop recur rest]
    :dont-use     '[.indexOf memfn]
-   :implemented? false}
-  [coll n])
+   :implemented? true}
+  [coll n]
+  (loop [coll coll indexer 0]
+    (if (empty? coll)
+      -1
+      (if (= n (first coll))
+        indexer
+        (recur (rest coll) (inc indexer))))))
+
+
+(def trans (partial apply map vector))
+
+(defn is-duplicate-entry
+  [coll]
+  (not= (count (set coll)) 9))
+
+(defn get-grid-format
+  [coll]
+  (partition 9 (flatten coll)))
+
+(defn validate-sets
+  "return false if entry is duplicated else return true"
+  [grid]
+  (zero? (count (filter is-duplicate-entry grid))))
+
+(defn get-small-sudokus
+  [grid]
+  (partition 9 (flatten (trans (map (partial partition 3) grid)))))
+
+(defn validate-columns
+  [grid]
+  (validate-sets (apply map vector grid)))
+
+(defn validate-small-sudokus
+  [grid]
+  (validate-sets (get-small-sudokus grid))
+  )
 
 (defn validate-sudoku-grid
   "Given a 9 by 9 sudoku grid, validate it."
   {:level        :hard
-   :implemented? false}
-  [grid])
+   :implemented? true}
+  [coll]
+  (let [grid (get-grid-format coll)]
+    (and (validate-sets grid) (validate-small-sudokus grid) (validate-columns grid))))

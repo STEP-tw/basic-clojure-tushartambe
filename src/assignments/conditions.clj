@@ -56,8 +56,8 @@
 
 (defn is-single-occurance [subcoll supercoll]
   (not (or
-         (empty? (filter (into #{} subcoll) supercoll))
-         (not= subcoll (filter (into #{} subcoll) supercoll)))))
+         (empty? (filter (set subcoll) supercoll))
+         (not= subcoll (filter (set subcoll) supercoll)))))
 
 (defn conditions-apply
   "Given a collection of any length, returns:
