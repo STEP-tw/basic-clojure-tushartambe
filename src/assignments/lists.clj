@@ -1,5 +1,26 @@
 (ns assignments.lists)
 
+(defn first-of-all [colls]
+  (loop [coll colls
+         res []]
+    (if (empty? coll)
+      res
+      (recur (rest coll) (conj res (ffirst coll))))))
+
+(defn rest-of-all [colls]
+  (loop [coll colls
+         res []]
+    (if (empty? coll)
+      res
+      (recur (rest coll) (conj res (rest (first coll)))))))
+
+(defn my-map [f colls]
+  (loop [coll colls
+         res []]
+    (if (some empty? coll)
+      res
+      (recur (rest-of-all coll) (conj res (apply f (first-of-all coll)))))))
+
 (defn map'
   "Implement a non-lazy version of map that accepts a
   mapper function and several collections. The output
@@ -7,14 +28,15 @@
   {:level        :medium
    :use          '[loop recur]
    :dont-use     '[map]
-   :implemented? false}
+   :implemented? true}
   [f & colls]
-  (loop [coll colls
-         index 0
-         accumulator []]
-    (if (= (count colls) index)
-      accumulator
-      (recur (rest coll) (inc index) (conj accumulator (f (first coll)))))))
+  (if (= (count colls) 1)
+    (loop [coll (flatten colls)
+           result []]
+      (if (empty? coll)
+        result
+        (recur (rest coll) (conj result (f (first coll)))))))
+  (my-map f colls))
 
 (defn filter'
   "Implement a non-lazy version of filter that accepts a
@@ -106,7 +128,7 @@
   {:level        :easy
    :use          '[partition every? partial apply <=]
    :dont-use     '[loop recur]
-   :implemented? false}
+   :implemented? true}
   [coll]
   (apply <= coll))
 
@@ -121,6 +143,10 @@
   [coll]
   )
 
+(defn deduplicate [coll n] (cond
+                             (empty? coll) (conj coll n)
+                             (not= n (last coll)) (conj coll n)
+                             :else coll))
 (defn dedupe'
   "Implement your own lazy sequence version of dedupe which returns
   a collection with consecutive duplicates eliminated (like the uniq command).
@@ -129,7 +155,8 @@
    :use          '[lazy-seq conj let :optionally letfn]
    :dont-use     '[loop recur dedupe]
    :implemented? false}
-  [coll])
+  [coll]
+  (lazy-seq (reduce deduplicate [] coll)))
 
 (defn sum-of-adjacent-digits
   "Given a collection, returns a map of the sum of adjacent digits.
@@ -137,8 +164,9 @@
   {:level        :medium
    :use          '[map + rest]
    :dont-use     '[loop recur partition]
-   :implemented? false}
-  [coll])
+   :implemented? true}
+  [coll]
+  (map + coll (rest coll)))
 
 (defn max-three-digit-sequence
   "Given a collection of numbers, find a three digit sequence that
@@ -149,7 +177,11 @@
    :use          '[map next nnext max-key partial apply + if ->>]
    :dont-use     '[loop recur partition]
    :implemented? false}
-  [coll])
+  [coll]
+  ((last (sort-by :sum (map (fn [l m n] {:sum (+ l m n) :list [l m n]})
+                            coll
+                            (next coll)
+                            (nnext coll)))) :list))
 
 ;; transpose is a def. Not a defn.
 (def
@@ -204,7 +236,7 @@
   [[1 4] [1 3] [1 5] [2 4] [2 3] [2 5] [3 4]]"
   {:level        :easy
    :use          '[for]
-   :implemented? false}
+   :implemented? true}
   [seq1 seq2]
   (for [x seq1 y seq2 :while (not= x y)] [x y]))
 
@@ -213,7 +245,7 @@
   each element repeated twice"
   {:level        :easy
    :use          '[mapcat partial repeat :optionally vector]
-   :implemented? false}
+   :implemented? true}
   [coll]
   (mapcat #(vector % %) coll))
 
@@ -222,8 +254,9 @@
   elements whose index is either divisible by three or five"
   {:level        :easy
    :use          '[keep-indexed when :optionally map-indexed filter]
-   :implemented? false}
-  [coll])
+   :implemented? true}
+  [coll]
+  (keep-indexed #(when (or (zero? (mod %1 3)) (zero? (mod %1 5))) %2) [1 2 3 4 5 6 7]))
 
 (defn sqr-of-the-first
   "Given a collection, return a new collection that contains the
@@ -245,6 +278,10 @@
    :implemented? false}
   [coll nesting-factor])
 
+(defn interleave'
+  [coll]
+  (apply interleave (split-at (int (/ (count coll) 2)) coll)))
+
 (defn split-comb
   "Given a collection, return a new sequence where the first
   half of the sequence is interleaved with the second half.
@@ -255,7 +292,8 @@
    :use          '[interleave split-at if rem concat take-last]
    :dont-use     '[loop recur map-indexed take drop]
    :implemented? false}
-  [coll])
+  [coll]
+  (if (odd? (count coll)) (concat (interleave' coll) (take-last 1 coll)) (interleave' coll)))
 
 (defn muted-thirds
   "Given a sequence of numbers, make every third element
@@ -265,7 +303,8 @@
    :use          '[map cycle]
    :dont-use     '[loop recur map-indexed take take-nth]
    :implemented? false}
-  [coll])
+  [coll]
+  (map * coll (cycle [1 1 0])))
 
 (defn palindrome?
   "Implement a recursive palindrome check of any given sequence"
