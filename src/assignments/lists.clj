@@ -1,26 +1,5 @@
 (ns assignments.lists)
 
-(defn first-of-all [colls]
-  (loop [coll colls
-         res []]
-    (if (empty? coll)
-      res
-      (recur (rest coll) (conj res (ffirst coll))))))
-
-(defn rest-of-all [colls]
-  (loop [coll colls
-         res []]
-    (if (empty? coll)
-      res
-      (recur (rest coll) (conj res (rest (first coll)))))))
-
-(defn my-map [f colls]
-  (loop [coll colls
-         res []]
-    (if (some empty? coll)
-      res
-      (recur (rest-of-all coll) (conj res (apply f (first-of-all coll)))))))
-
 (defn map'
   "Implement a non-lazy version of map that accepts a
   mapper function and several collections. The output
@@ -31,12 +10,16 @@
    :implemented? true}
   [f & colls]
   (if (= (count colls) 1)
-    (loop [coll (flatten colls)
+    (loop [coll (first colls)
            result []]
       (if (empty? coll)
         result
-        (recur (rest coll) (conj result (f (first coll)))))))
-  (my-map f colls))
+        (recur (rest coll) (conj result (f (first coll))))))
+    (loop [coll colls
+           result []]
+      (if (some empty? coll)
+        result
+        (recur (map' rest coll) (conj result (apply f (map' first coll))))))))
 
 (defn filter'
   "Implement a non-lazy version of filter that accepts a
@@ -61,11 +44,11 @@
    :use          '[loop recur]
    :dont-use     '[reduce]
    :implemented? true}
-  ([f coll]
-   (if (some coll? coll)
-     (f coll) (apply f coll)))
-  ([f init coll]
-   (apply f (cons init coll))))
+  ([f coll] (reduce' f (first coll) (rest coll)))
+  ([f init coll] (loop [coll coll result init]
+                   (if (empty? coll)
+                     result
+                     (recur (rest coll) (f result (first coll)))))))
 
 (defn count'
   "Implement your own version of count that counts the
@@ -139,14 +122,10 @@
   {:level        :medium
    :use          '[lazy-seq set conj let :optionally letfn]
    :dont-use     '[loop recur distinct]
-   :implemented? false}
+   :implemented? true}
   [coll]
-  )
+  (lazy-seq (reduce #(if-not ((set %1) %2) (conj %1 %2) %1) [] coll)))
 
-(defn deduplicate [coll n] (cond
-                             (empty? coll) (conj coll n)
-                             (not= n (last coll)) (conj coll n)
-                             :else coll))
 (defn dedupe'
   "Implement your own lazy sequence version of dedupe which returns
   a collection with consecutive duplicates eliminated (like the uniq command).
@@ -154,9 +133,13 @@
   {:level        :medium
    :use          '[lazy-seq conj let :optionally letfn]
    :dont-use     '[loop recur dedupe]
-   :implemented? false}
+   :implemented? true}
   [coll]
-  (lazy-seq (reduce deduplicate [] coll)))
+  (lazy-seq (reduce #(if (not= (last %1) %2)
+                       (conj %1 %2)
+                       %1)
+                    []
+                    coll)))
 
 (defn sum-of-adjacent-digits
   "Given a collection, returns a map of the sum of adjacent digits.
@@ -176,7 +159,7 @@
   {:level        :medium
    :use          '[map next nnext max-key partial apply + if ->>]
    :dont-use     '[loop recur partition]
-   :implemented? false}
+   :implemented? true}
   [coll]
   ((last (sort-by :sum (map (fn [l m n] {:sum (+ l m n) :list [l m n]})
                             coll
@@ -187,14 +170,13 @@
 (def
   ^{:level        :easy
     :dont-use     '[loop recur for nth get]
-    :implemented? false}
+    :implemented? true}
   transpose
   "Transposes a given matrix.
   [[a b] [c d]] => [[a c] [b d]].
   Note this is a def. Not a defn.
   Return a vector of vectors, not list of vectors or vectors of lists"
-  (apply mapv vector [[:a :b] [:c :d]])
-  )
+  (partial apply mapv vector))
 
 (defn difference
   "Given two collections, returns only the elements that are present
@@ -227,7 +209,9 @@
   "Calculate all the points around the origin
   [-1 -1] [0 -1] [1 -1] etc. There should be 8 points
   Note this is a def, not a defn"
-  (remove (fn [x] (= x [0 0])) (for [x (range -1 2) y (range -1 2)] [x y])))
+  #(for [x (range -1 2)
+         y (range -1 2) :when (not= x y 0)]
+     [x y]))
 
 (defn cross-product
   "Given two sequences, generate every combination in the sequence
@@ -256,7 +240,7 @@
    :use          '[keep-indexed when :optionally map-indexed filter]
    :implemented? true}
   [coll]
-  (keep-indexed #(when (or (zero? (mod %1 3)) (zero? (mod %1 5))) %2) [1 2 3 4 5 6 7]))
+  (keep-indexed #(when (or (zero? (mod %1 3)) (zero? (mod %1 5))) %2) coll))
 
 (defn sqr-of-the-first
   "Given a collection, return a new collection that contains the
@@ -265,8 +249,9 @@
   [4 5 6] => [16 16 16]"
   {:level        :easy
    :use          '[map constantly let]
-   :implemented? false}
-  [coll])
+   :implemented? true}
+  [coll]
+  (map (constantly (* (first coll) (first coll))) coll))
 
 (defn russian-dolls
   "Given a collection and a number, wrap each element in a nested vector
@@ -275,8 +260,9 @@
   {:level        :medium
    :use          '[iterate mapv partial vector drop first ->>]
    :dont-use     '[for loop recur reduce]
-   :implemented? false}
-  [coll nesting-factor])
+   :implemented? true}
+  [coll nesting-factor]
+  (mapv #(last (take nesting-factor (iterate vector %1))) coll))
 
 (defn interleave'
   [coll]
@@ -291,7 +277,7 @@
   {:level        :easy
    :use          '[interleave split-at if rem concat take-last]
    :dont-use     '[loop recur map-indexed take drop]
-   :implemented? false}
+   :implemented? true}
   [coll]
   (if (odd? (count coll)) (concat (interleave' coll) (take-last 1 coll)) (interleave' coll)))
 
@@ -302,7 +288,7 @@
   {:level        :easy
    :use          '[map cycle]
    :dont-use     '[loop recur map-indexed take take-nth]
-   :implemented? false}
+   :implemented? true}
   [coll]
   (map * coll (cycle [1 1 0])))
 
